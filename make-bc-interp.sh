@@ -1,2 +1,2 @@
 mkdir -p bin
-g++ -static -o bin/bcvm -std=c++20 ./bytecode.interpreter.cc ./machine.cc -O0 -g -I$PWD
+g++ -o bin/bcvm -std=c++20 ./bytecode.interpreter.cc ./machine.cc -O0 -g -I$PWD

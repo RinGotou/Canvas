@@ -28,99 +28,85 @@ bool Machine::Run(Program &prog) {
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::Int});
-      stack_.top().value.integer = 
-        tmp1.value.integer + tmp0.value.integer;
+      INTVAL(stack_.top()) = INTVAL(tmp1) + INTVAL(tmp0); 
       break;
     case Inst::Sub:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::Int});
-      stack_.top().value.integer = 
-        tmp0.value.integer - tmp1.value.integer;
+      INTVAL(stack_.top()) = INTVAL(tmp0) - INTVAL(tmp1);
       break;
     case Inst::Mul:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::Int});
-      stack_.top().value.integer = 
-        tmp1.value.integer * tmp0.value.integer;
+      INTVAL(stack_.top()) = INTVAL(tmp1) * INTVAL(tmp0);
       break;
     case Inst::Div:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::Int});
-      stack_.top().value.integer = 
-        tmp0.value.integer / tmp1.value.integer;
+      INTVAL(stack_.top()) = INTVAL(tmp0) / INTVAL(tmp1);
       break;
     case Inst::Mod:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::Int});
-      stack_.top().value.integer = 
-        tmp0.value.integer % tmp1.value.integer;
+      INTVAL(stack_.top()) = INTVAL(tmp0) % INTVAL(tmp1);
       break;
     case Inst::AddU:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::UInt});
-      stack_.top().value.integer = 
-        tmp1.value.integer + tmp0.value.integer;
+      UINTVAL(stack_.top()) = UINTVAL(tmp1) + UINTVAL(tmp0);
       break;
     case Inst::SubU:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::UInt});
-      stack_.top().value.integer = 
-        tmp0.value.integer - tmp1.value.integer;
+      UINTVAL(stack_.top()) = UINTVAL(tmp0) - UINTVAL(tmp1);
       break;
     case Inst::MulU:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::UInt});
-      stack_.top().value.integer = 
-        tmp1.value.integer * tmp0.value.integer;
+      UINTVAL(stack_.top()) = UINTVAL(tmp1) * UINTVAL(tmp0);
       break;
     case Inst::DivU:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::UInt});
-      stack_.top().value.integer = 
-        tmp0.value.integer / tmp1.value.integer;
+      UINTVAL(stack_.top()) = UINTVAL(tmp0) / UINTVAL(tmp1);
       break;
     case Inst::ModU:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::UInt});
-      stack_.top().value.integer = 
-        tmp0.value.integer % tmp1.value.integer;
+      UINTVAL(stack_.top()) = UINTVAL(tmp0) % UINTVAL(tmp1);
       break;
     case Inst::AddF:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::Decimal});
-      stack_.top().value.decimal = 
-        tmp0.value.decimal + tmp1.value.decimal;
+      DECIVAL(stack_.top()) = DECIVAL(tmp0) + DECIVAL(tmp1);
       break;
     case Inst::SubF:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::Decimal});
-      stack_.top().value.decimal = 
-        tmp0.value.decimal - tmp1.value.decimal;
+      DECIVAL(stack_.top()) = DECIVAL(tmp0) - DECIVAL(tmp1);
       break;
     case Inst::MulF:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::Decimal});
-      stack_.top().value.decimal = 
-        tmp0.value.decimal * tmp1.value.decimal;
+      DECIVAL(stack_.top()) = DECIVAL(tmp0) * DECIVAL(tmp1);
       break;
     case Inst::DivF:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
       stack_.push(Unit{0, UnitType::Decimal});
-      stack_.top().value.decimal = 
-        tmp0.value.decimal / tmp1.value.decimal;
+      DECIVAL(stack_.top()) = DECIVAL(tmp0) / DECIVAL(tmp1);
       break;
     //load 32-bit unsigned int
     case Inst::PushUInt:
@@ -128,30 +114,28 @@ bool Machine::Run(Program &prog) {
       break;
     //load 32-bit unsigned int and shift left 32-bit
     case Inst::PushUIntSL:
-      tmp0.value.uinteger = GET_ARGS(current);
-      tmp0.value.uinteger <<= 32;
+      UINTVAL(tmp0) = GET_ARGS(current);
+      UINTVAL(tmp0) <<= 32;
       stack_.push(Unit{tmp0.value, UnitType::UInt});
       break;
     //assemble signed int hi/lo part into single value
     case Inst::PushIntAH:
       POP_VALUE_TO(tmp0);
-      tmp1.value.uinteger = GET_ARGS(current);
+      UINTVAL(tmp1) = GET_ARGS(current);
       stack_.push(Unit{0, UnitType::Int});
-      stack_.top().value.uinteger = 
-        tmp0.value.uinteger + tmp1.value.uinteger;
+      UINTVAL(stack_.top()) = UINTVAL(tmp0) + UINTVAL(tmp1);
       break;
     //load 32-bit signed int
     case Inst::PushInt:
       //cast to int32_t after shift, then assign to int64_t
-      tmp0.value.integer = static_cast<int32_t>(GET_ARGS(current));
+      INTVAL(tmp0) = static_cast<int32_t>(GET_ARGS(current));
       stack_.push(Unit{tmp0.value, UnitType::Int});
       break;
     case Inst::PushDecLoAH:
       POP_VALUE_TO(tmp0);
-      tmp1.value.uinteger = GET_ARGS(current);
+      UINTVAL(tmp1) = GET_ARGS(current);
       stack_.push(Unit{0, UnitType::Decimal});
-      stack_.top().value.uinteger = 
-        tmp0.value.uinteger + tmp1.value.uinteger;
+      UINTVAL(stack_.top()) = UINTVAL(tmp0) + UINTVAL(tmp1);
       break;
     case Inst::Jump:
       pc_ = GET_ARGS(current);
@@ -159,7 +143,7 @@ bool Machine::Run(Program &prog) {
     //jump if top value is (equals to) true
     case Inst::Branch:
       if (!stack_.empty()) {
-        if (stack_.top().value.uinteger != 0ull) {
+        if (UINTVAL(stack_.top()) != 0ull) {
           pc_ = GET_ARGS(current);
           continue;
         }
@@ -174,13 +158,13 @@ bool Machine::Run(Program &prog) {
       if (!stack_.empty()) {
         switch (stack_.top().type) {
         case UnitType::Int:
-          printf("%s: %ld\n", "Int", stack_.top().value.integer);
+          printf("%s: %ld\n", "Int", INTVAL(stack_.top()));
           break;
         case UnitType::UInt:
-          printf("%s: %lu\n", "UInt", stack_.top().value.uinteger);
+          printf("%s: %lu\n", "UInt", UINTVAL(stack_.top()));
           break;
         case UnitType::Decimal:
-          printf("%s: %f\n", "Decimal", stack_.top().value.decimal);
+          printf("%s: %f\n", "Decimal", DECIVAL(stack_.top()));
           break;
         }
       }

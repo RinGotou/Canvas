@@ -34,7 +34,7 @@ enum class Inst : uint8_t {
   PushInt, PushUInt, PushUIntSL, PushIntAH, 
   Jump, Branch, Pop, PrintStackTop,
   PushDecLoAH, AddF, SubF, MulF, DivF,
-  Branch, 
+   
 };
 
 //TODO: string operation inst
@@ -82,6 +82,10 @@ struct Unit {
   UnitValue value;
   UnitType type;
 };
+
+#define INTVAL(_unit)  (_unit).value.integer
+#define UINTVAL(_unit) (_unit).value.uinteger
+#define DECIVAL(_unit) (_unit).value.decimal
 
 //memo: use independent pc stack?
 
