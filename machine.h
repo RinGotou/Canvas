@@ -14,7 +14,7 @@ using Program = std::vector<Code>;
 using std::stack;
 using std::vector;
 
-constexpr int64_t kMaxJumpAddrRel = 0x1FFFFFFFFFFFFFFF;
+constexpr int64_t kMaxJumpAddrRange = 0x1FFFFFFFFFFFFFFF;
 
 // warning: shift left for a negative signed int is UB before c++20
 // consider safe impl for signed int.
@@ -23,6 +23,7 @@ constexpr int64_t kMaxJumpAddrRel = 0x1FFFFFFFFFFFFFFF;
 // Symbol type: const string, 
 
 //TODO: Decimal command
+//TODO: branch command
 // U - Unsigned
 // SL - Shift left
 // AH - Assemble Highpart
@@ -33,6 +34,7 @@ enum class Inst : uint8_t {
   PushInt, PushUInt, PushUIntSL, PushIntAH, 
   Jump, Branch, Pop, PrintStackTop,
   PushDecLoAH, AddF, SubF, MulF, DivF,
+  Branch, 
 };
 
 //TODO: string operation inst

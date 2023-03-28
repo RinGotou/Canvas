@@ -231,7 +231,7 @@ int main(int argc, char **argv) {
             args = stoull(assembly[1], nullptr, base);
 
             if (IsJumpInst(static_cast<Inst>(inst)) &&
-                  args > kMaxJumpAddrRel) {
+                  args > kMaxJumpAddrRange) {
               fine = false;
               puts("Jump distance out of range");
             }
