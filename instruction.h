@@ -42,22 +42,24 @@ DEF_INST(Pop, "pop")
 DEF_INST(PrintStackTop, "print")
 
 DEF_INST(ShiftLeft, "sl")
+DEF_INST(ShiftLeftImm, "sli")
 DEF_INST(LogicShiftRight, "lsr")
 DEF_INST(ArithShiftRight, "asr")
+DEF_INST(LogicShiftRightImm, "lsri")
+DEF_INST(ArithShiftRightImm, "asri")
 
 DEF_INST(And, "and")
 DEF_INST(Or, "or")
 DEF_INST(Not, "not")
 DEF_INST(XOr, "xor")
-DEF_INST(XAnd, "xand")
 DEF_INST(LogicAnd, "land")
 DEF_INST(LogicOr, "lor")
 DEF_INST(LogicNot, "lnot")
-DEF_INST(LogicXOr, "lxor")
-DEF_INST(LogicXAnd, "lxand")
 
 DEF_INST(RotateLeft, "rl")
 DEF_INST(RotateRight, "rr")
+DEF_INST(RotateLeftImm, "rli")
+DEF_INST(RotateRightImm, "rri")
 
 DEF_INST(Doze, "doze")
 

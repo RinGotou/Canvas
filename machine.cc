@@ -1,10 +1,12 @@
 #include "machine.h"
 #include <cstdio>
+#include <bit>
 
 // useful macros
 //TODO: add more arg option to op to make full use of 64-bit inst
 #define GET_INST(_code) static_cast<uint8_t>(_code % uint64_t(0x80))
 #define GET_ARGS(_code) (_code >> 7)
+#define HAS_ARGS(_code) ((_code >> 7) != 0x0)
 
 #define POP_VALUE_TO(_tmp) \
   _tmp = stack_.top();     \
@@ -16,7 +18,6 @@ bool Machine::Run(Program &prog) {
   //reset state
   pc_ = 0;
   stack<Unit>().swap(stack_);
-  //while (!stack_.empty()) stack_.pop();
 
   auto prog_size = prog.size();
   Unit tmp0, tmp1;
@@ -181,14 +182,106 @@ bool Machine::Run(Program &prog) {
       INTVAL(stack_.top()) << UINTVAL(tmp0);
       break;
 
+    case Inst::ShiftLeftImm:
+      UINTVAL(tmp0) = GET_ARGS(current);
+      INTVAL(stack_.top()) << UINTVAL(tmp0);
+      break;
+
     case Inst::LogicShiftRight:
       POP_VALUE_TO(tmp0);
-      UINTVAL(stack_.top()) << UINTVAL(tmp0);
+      UINTVAL(stack_.top()) >> UINTVAL(tmp0);
       break;
 
     case Inst::ArithShiftRight:
       POP_VALUE_TO(tmp0);
-      INTVAL(stack_.top()) << UINTVAL(tmp0);
+      INTVAL(stack_.top()) >> UINTVAL(tmp0);
+      break;
+
+    case Inst::LogicShiftRightImm:
+      UINTVAL(tmp0) = GET_ARGS(current);
+      UINTVAL(stack_.top()) >> UINTVAL(tmp0);
+      break;
+
+    case Inst::ArithShiftRightImm:
+      UINTVAL(tmp0) = GET_ARGS(current);
+      INTVAL(stack_.top()) >> UINTVAL(tmp0);
+      break;
+
+    case Inst::And:
+      POP_VALUE_TO(tmp1);
+      POP_VALUE_TO(tmp0);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = UINTVAL(tmp0) & UINTVAL(tmp1);
+      break;
+
+    case Inst::Or:
+      POP_VALUE_TO(tmp1);
+      POP_VALUE_TO(tmp0);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = UINTVAL(tmp0) | UINTVAL(tmp1);
+      break;
+
+    case Inst::Not:
+      POP_VALUE_TO(tmp0);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = ~UINTVAL(tmp0);
+      break;
+
+    case Inst::XOr:
+      POP_VALUE_TO(tmp1);
+      POP_VALUE_TO(tmp0);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = UINTVAL(tmp0) ^ UINTVAL(tmp1);
+      break;
+
+    //Any non-zero value is converted to true.
+    case Inst::LogicAnd:
+      POP_VALUE_TO(tmp1);
+      POP_VALUE_TO(tmp0);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = UINTVAL(tmp0) && UINTVAL(tmp1);
+      break;
+
+    case Inst::LogicOr:
+      POP_VALUE_TO(tmp1);
+      POP_VALUE_TO(tmp0);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = UINTVAL(tmp0) || UINTVAL(tmp1);
+      break;
+
+    case Inst::LogicNot:
+      POP_VALUE_TO(tmp0);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = !UINTVAL(tmp0);
+      break;
+
+    //Use C++20 directly for UB-free impl of rotate shift.
+    case Inst::RotateLeft:
+      POP_VALUE_TO(tmp1);
+      POP_VALUE_TO(tmp0);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = std::rotl(UINTVAL(tmp0), UINTVAL(tmp1));
+      break;
+
+    case Inst::RotateRight:
+      POP_VALUE_TO(tmp1);
+      POP_VALUE_TO(tmp0);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = std::rotr(UINTVAL(tmp0), UINTVAL(tmp1));
+      break;
+
+    case Inst::RotateLeftImm:
+      UINTVAL(tmp1) = GET_ARGS(current);
+      POP_VALUE_TO(tmp0);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = std::rotl(UINTVAL(tmp0), UINTVAL(tmp1));
+      break;
+
+    case Inst::RotateRightImm:
+      UINTVAL(tmp1) = GET_ARGS(current);
+      POP_VALUE_TO(tmp0);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = std::rotr(UINTVAL(tmp0), UINTVAL(tmp1));
       break;
 
     case Inst::Doze:
