@@ -41,9 +41,8 @@ DEF_INST(Branch, "branch")
 DEF_INST(Pop, "pop")
 DEF_INST(PrintStackTop, "print")
 
-DEF_INST(LogicShiftLeft, "lsl")
+DEF_INST(ShiftLeft, "sl")
 DEF_INST(LogicShiftRight, "lsr")
-DEF_INST(ArithShiftLeft, "asl")
 DEF_INST(ArithShiftRight, "asr")
 
 DEF_INST(And, "and")

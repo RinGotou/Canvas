@@ -2,6 +2,7 @@
 #include <cstdio>
 
 // useful macros
+//TODO: add more arg option to op to make full use of 64-bit inst
 #define GET_INST(_code) static_cast<uint8_t>(_code % uint64_t(0x80))
 #define GET_ARGS(_code) (_code >> 7)
 
@@ -170,25 +171,24 @@ bool Machine::Run(Program &prog) {
       }
       else {
         //TODO: interrupt
-        std::puts("!Empty stack");
+        std::puts("(!)Empty stack");
       }
       break;
 
-    case Inst::LogicShiftLeft:
-      POP_VALUE_TO(tmp0);
-      
+    case Inst::ShiftLeft:
+      POP_VALUE_TO(tmp0); //shift amount
+      //target is on stack top.
+      INTVAL(stack_.top()) << UINTVAL(tmp0);
       break;
 
     case Inst::LogicShiftRight:
-
-      break;
-
-    case Inst::ArithShiftLeft:
-
+      POP_VALUE_TO(tmp0);
+      UINTVAL(stack_.top()) << UINTVAL(tmp0);
       break;
 
     case Inst::ArithShiftRight:
-
+      POP_VALUE_TO(tmp0);
+      INTVAL(stack_.top()) << UINTVAL(tmp0);
       break;
 
     case Inst::Doze:

@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <string>
 
-//TODO:Shrink inst length to 32-bit
 //7bit inst, 57bit args
 using Code = uint64_t;
 // |--------args--------|--inst--|
