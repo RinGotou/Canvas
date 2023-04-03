@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 
+//TODO:Shrink inst length to 32-bit
 //7bit inst, 57bit args
 using Code = uint64_t;
 // |--------args--------|--inst--|
@@ -18,53 +19,24 @@ constexpr int64_t kMaxJumpAddrRange = 0x1FFFFFFFFFFFFFFF;
 
 // warning: shift left for a negative signed int is UB before c++20
 // consider safe impl for signed int.
-
-//TODO:symbol table(for string, etc.)
-// Symbol type: const string, 
-
-//TODO: Decimal command
-//TODO: branch command
-// U - Unsigned
-// SL - Shift left
-// AH - Assemble Highpart
-// F - Float
-enum class Inst : uint8_t {
-  Doze = 0, Add, Sub, Mul, Div, Mod,
-  AddU, SubU, MulU, DivU, ModU,
-  PushInt, PushUInt, PushUIntSL, PushIntAH, 
-  Jump, Branch, Pop, PrintStackTop,
-  PushDecLoAH, AddF, SubF, MulF, DivF,
-   
+struct Symbol {
+  uint64_t id, value;
 };
+//TODO: strtab?
+//TODO: Magic string?
+
+#define INIT_INSTID
+enum class Inst : uint8_t {
+#include "instruction.h"
+};
+#undef INIT_INSTID
 
 //TODO: string operation inst
-// warning: keep element ordering according to Inst
+#define INIT_INSTSTR
 const vector<const char*> kInstStrings = {
-  "doze",
-  "add",
-  "sub",
-  "mul",
-  "div",
-  "mod",
-  "addu",
-  "subu",
-  "mulu",
-  "divu",
-  "modu",
-  "pushint",
-  "pushuint",
-  "pushuintsl",
-  "pushintah",
-  "j",
-  "b",
-  "pop",
-  "print",
-  "pushdecloah",
-  "addf",
-  "subf",
-  "mulf",
-  "divf",
+#include "instruction.h"
 };
+#undef INIT_INSTSTR
 
 enum class UnitType {
   Int, //int64_t 
@@ -83,6 +55,7 @@ struct Unit {
   UnitType type;
 };
 
+// INT VALue, Unsigned INT VALue, DECImal VALue
 #define INTVAL(_unit)  (_unit).value.integer
 #define UINTVAL(_unit) (_unit).value.uinteger
 #define DECIVAL(_unit) (_unit).value.decimal

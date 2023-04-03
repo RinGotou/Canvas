@@ -173,6 +173,24 @@ bool Machine::Run(Program &prog) {
         std::puts("!Empty stack");
       }
       break;
+
+    case Inst::LogicShiftLeft:
+      POP_VALUE_TO(tmp0);
+      
+      break;
+
+    case Inst::LogicShiftRight:
+
+      break;
+
+    case Inst::ArithShiftLeft:
+
+      break;
+
+    case Inst::ArithShiftRight:
+
+      break;
+
     case Inst::Doze:
     default:
       break;
