@@ -5,7 +5,7 @@
 // useful macros
 //TODO: add more arg option to op to make full use of 64-bit inst
 #define GET_INST(_code) static_cast<uint8_t>(_code % uint64_t(0x80))
-#define GET_ARGS(_code) (_code >> 7)
+#define GET_ARGS(_code) static_cast<uint64_t>(_code >> 7)
 #define HAS_ARGS(_code) ((_code >> 7) != 0x0)
 
 #define POP_VALUE_TO(_tmp) \
@@ -89,55 +89,47 @@ bool Machine::Run(Program &prog) {
     case Inst::AddF:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
-      stack_.push(Unit{0, UnitType::Decimal});
-      DECIVAL(stack_.top()) = DECIVAL(tmp0) + DECIVAL(tmp1);
+      stack_.push(Unit{0, UnitType::FP});
+      FPVAL(stack_.top()) = FPVAL(tmp0) + FPVAL(tmp1);
       break;
     case Inst::SubF:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
-      stack_.push(Unit{0, UnitType::Decimal});
-      DECIVAL(stack_.top()) = DECIVAL(tmp0) - DECIVAL(tmp1);
+      stack_.push(Unit{0, UnitType::FP});
+      FPVAL(stack_.top()) = FPVAL(tmp0) - FPVAL(tmp1);
       break;
     case Inst::MulF:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
-      stack_.push(Unit{0, UnitType::Decimal});
-      DECIVAL(stack_.top()) = DECIVAL(tmp0) * DECIVAL(tmp1);
+      stack_.push(Unit{0, UnitType::FP});
+      FPVAL(stack_.top()) = FPVAL(tmp0) * FPVAL(tmp1);
       break;
     case Inst::DivF:
       POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
-      stack_.push(Unit{0, UnitType::Decimal});
-      DECIVAL(stack_.top()) = DECIVAL(tmp0) / DECIVAL(tmp1);
+      stack_.push(Unit{0, UnitType::FP});
+      FPVAL(stack_.top()) = FPVAL(tmp0) / FPVAL(tmp1);
       break;
-    //load 32-bit unsigned int
-    case Inst::PushUInt:
+    case Inst::PushHalfWordImm:
       stack_.push(Unit{GET_ARGS(current), UnitType::UInt});
       break;
-    //load 32-bit unsigned int and shift left 32-bit
-    case Inst::PushUIntSL:
+    case Inst::PushHalfWordImmSL16:
       UINTVAL(tmp0) = GET_ARGS(current);
-      UINTVAL(tmp0) <<= 32;
+      UINTVAL(tmp0) <<= 16;
       stack_.push(Unit{tmp0.value, UnitType::UInt});
       break;
-    //assemble signed int hi/lo part into single value
-    case Inst::PushIntAH:
+    case Inst::AddSL32:
+      POP_VALUE_TO(tmp1);
       POP_VALUE_TO(tmp0);
-      UINTVAL(tmp1) = GET_ARGS(current);
-      stack_.push(Unit{0, UnitType::Int});
-      UINTVAL(stack_.top()) = UINTVAL(tmp0) + UINTVAL(tmp1);
+      stack_.push(Unit{0, UnitType::UInt});
+      UINTVAL(stack_.top()) = UINTVAL(tmp1) + UINTVAL(tmp0);
+      UINTVAL(stack_.top()) <<= 32;
       break;
-    //load 32-bit signed int
-    case Inst::PushInt:
-      //cast to int32_t after shift, then assign to int64_t
-      INTVAL(tmp0) = static_cast<int32_t>(GET_ARGS(current));
-      stack_.push(Unit{tmp0.value, UnitType::Int});
+    case Inst::SpawnFP:
+      stack_.top().type = UnitType::FP;
       break;
-    case Inst::PushDecLoAH:
-      POP_VALUE_TO(tmp0);
-      UINTVAL(tmp1) = GET_ARGS(current);
-      stack_.push(Unit{0, UnitType::Decimal});
-      UINTVAL(stack_.top()) = UINTVAL(tmp0) + UINTVAL(tmp1);
+    case Inst::SpawnSignedInt:
+      stack_.top().type = UnitType::Int;
       break;
     case Inst::Jump:
       pc_ = GET_ARGS(current);
@@ -160,13 +152,13 @@ bool Machine::Run(Program &prog) {
       if (!stack_.empty()) {
         switch (stack_.top().type) {
         case UnitType::Int:
-          printf("%s: %ld\n", "Int", INTVAL(stack_.top()));
+          printf("%s: %lld\n", "Int", INTVAL(stack_.top()));
           break;
         case UnitType::UInt:
-          printf("%s: %lu\n", "UInt", UINTVAL(stack_.top()));
+          printf("%s: %llu\n", "UInt", UINTVAL(stack_.top()));
           break;
-        case UnitType::Decimal:
-          printf("%s: %f\n", "Decimal", DECIVAL(stack_.top()));
+        case UnitType::FP:
+          printf("%s: %f\n", "FP", FPVAL(stack_.top()));
           break;
         }
       }
@@ -179,32 +171,32 @@ bool Machine::Run(Program &prog) {
     case Inst::ShiftLeft:
       POP_VALUE_TO(tmp0); //shift amount
       //target is on stack top.
-      INTVAL(stack_.top()) << UINTVAL(tmp0);
+      INTVAL(stack_.top()) <<= UINTVAL(tmp0);
       break;
 
     case Inst::ShiftLeftImm:
       UINTVAL(tmp0) = GET_ARGS(current);
-      INTVAL(stack_.top()) << UINTVAL(tmp0);
+      INTVAL(stack_.top()) <<= UINTVAL(tmp0);
       break;
 
     case Inst::LogicShiftRight:
       POP_VALUE_TO(tmp0);
-      UINTVAL(stack_.top()) >> UINTVAL(tmp0);
+      UINTVAL(stack_.top()) >>= UINTVAL(tmp0);
       break;
 
     case Inst::ArithShiftRight:
       POP_VALUE_TO(tmp0);
-      INTVAL(stack_.top()) >> UINTVAL(tmp0);
+      INTVAL(stack_.top()) >>= UINTVAL(tmp0);
       break;
 
     case Inst::LogicShiftRightImm:
       UINTVAL(tmp0) = GET_ARGS(current);
-      UINTVAL(stack_.top()) >> UINTVAL(tmp0);
+      UINTVAL(stack_.top()) >>= UINTVAL(tmp0);
       break;
 
     case Inst::ArithShiftRightImm:
       UINTVAL(tmp0) = GET_ARGS(current);
-      INTVAL(stack_.top()) >> UINTVAL(tmp0);
+      INTVAL(stack_.top()) >>= UINTVAL(tmp0);
       break;
 
     case Inst::And:

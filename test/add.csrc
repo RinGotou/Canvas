@@ -1,0 +1,5 @@
+pushimm 65540
+pushimm 2
+add
+print
+doze

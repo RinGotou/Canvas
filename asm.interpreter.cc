@@ -22,6 +22,8 @@ using std::stoll;
 using std::stoull;
 using std::stod;
 
+constexpr uint32_t kMaxJumpAddrRange = 0x1FFFFFF;
+
 bool ReadInst(vector<string> &dest, FILE *fp) {
   bool result = true;
   
@@ -64,13 +66,13 @@ bool ReadInst(vector<string> &dest, FILE *fp) {
   return result;
 }
 
-bool GetInst(uint64_t &dest, string_view str) {
+bool GetInst(uint32_t &dest, string_view str) {
   bool result = false;  
   
   for (size_t idx = 0, size = kInstStrings.size(); 
       idx < size; idx += 1) {
     if (strcmp(str.data(), kInstStrings[idx]) == 0) {
-      dest = static_cast<uint64_t>(idx);
+      dest = static_cast<uint32_t>(idx);
       result = true;
       break;
     }
@@ -85,8 +87,8 @@ inline bool IsUnsignedInst(Inst inst) {
     || inst == Inst::MulU
     || inst == Inst::DivU
     || inst == Inst::ModU
-    || inst == Inst::PushUInt
-    || inst == Inst::PushUIntSL
+    || inst == Inst::PushHalfWordImm
+    || inst == Inst::PushHalfWordImmSL16
     || inst == Inst::Jump
     || inst == Inst::Branch;
 }
@@ -131,7 +133,7 @@ bool TryExpandMacro(vector<string> &assembly, Program &prog) {
   int base = 10;
 
 #define IS_MACRO(_str) (strcmp(assembly[0].data(), _str) == 0)
-  if (IS_MACRO("pint")) {
+  if (IS_MACRO("pushimm")) {
     base = GetIntLiteralBase(assembly[1]);
     if (base == 2) {
       assembly[1] = assembly[1].substr(2, assembly[1].size() - 2);
@@ -139,42 +141,98 @@ bool TryExpandMacro(vector<string> &assembly, Program &prog) {
     int64_t value = stoll(assembly[1], nullptr, base);
     auto view = reinterpret_cast<uint64_t *>(&value);
 
-    if (*view > UINT32_MAX) {
-      uint64_t hi = *view >> 32;
-      uint64_t lo = *view & UINT32_MAX;
-      prog.push_back((hi << 7) + uint64_t(Inst::PushUIntSL));
-      prog.push_back((lo << 7) + uint64_t(Inst::PushIntAH));
+    if (*view > UINT16_MAX && *view <= UINT32_MAX) {
+      uint32_t hi = *view >> 16;
+      uint32_t lo = *view & UINT16_MAX;
+      prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
+      prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
+      prog.push_back(Code(Inst::AddU));
+      prog.push_back(Code(Inst::SpawnSignedInt));
+    }
+    else if (*view > UINT32_MAX) {
+      uint32_t hi32 = *view >> 32;
+      uint32_t lo32 = *view & UINT32_MAX;
+      // load hi32
+      uint32_t hi = hi32 >> 16;
+      uint32_t lo = hi32 & UINT16_MAX;
+      prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
+      prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
+      prog.push_back(Code(Inst::AddU));
+      prog.push_back((32u << 7) + Code(Inst::ShiftLeftImm));
+      // load lo32
+      hi = lo32 >> 16;
+      lo = lo32 & UINT16_MAX;
+      prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
+      prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
+      prog.push_back(Code(Inst::AddU));
+      // final combination
+      prog.push_back(Code(Inst::AddU));
     }
     else {
-      uint64_t arg = (*view) << 7;
-      prog.push_back(arg + uint64_t(Inst::PushInt));
+      Code arg = (*view) << 7;
+      prog.push_back(arg + Code(Inst::PushHalfWordImm));
     }
+    prog.push_back(Code(Inst::SpawnSignedInt));
   }
-  else if (IS_MACRO("puint")) {
+  else if (IS_MACRO("pushuimm")) {
     base = GetIntLiteralBase(assembly[1]);
     if (base == 2) {
       assembly[1] = assembly[1].substr(2, assembly[1].size() - 2);
     }
     uint64_t value = stoull(assembly[1], nullptr, base);
-    if (value > UINT32_MAX) {
-      uint64_t hi = value >> 32;
-      uint64_t lo = value & UINT32_MAX;
-      prog.push_back((hi << 7) + uint64_t(Inst::PushUIntSL));
-      prog.push_back((lo << 7) + uint64_t(Inst::PushUInt));
-      prog.push_back(uint64_t(Inst::AddU));
+    if (value > UINT16_MAX && value <= UINT32_MAX) {
+      uint32_t hi = value >> 16;
+      uint32_t lo = value & UINT16_MAX;
+      prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
+      prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
+      prog.push_back(Code(Inst::AddU));
+      prog.push_back(Code(Inst::SpawnSignedInt));
+    }
+    else if (value > UINT32_MAX) {
+      uint32_t hi32 = value >> 32;
+      uint32_t lo32 = value & UINT32_MAX;
+      // load hi32
+      uint32_t hi = hi32 >> 16;
+      uint32_t lo = hi32 & UINT16_MAX;
+      prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
+      prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
+      prog.push_back(Code(Inst::AddU));
+      prog.push_back((32u << 7) + Code(Inst::ShiftLeftImm));
+      // load lo32
+      hi = lo32 >> 16;
+      lo = lo32 & UINT16_MAX;
+      prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
+      prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
+      prog.push_back(Code(Inst::AddU));
+      // final combination
+      prog.push_back(Code(Inst::AddU));
     }
     else {
-      uint64_t arg = value << 7;
-      prog.push_back((arg << 7) + uint64_t(Inst::PushUInt));
+      Code arg = value << 7;
+      prog.push_back((arg << 7) + Code(Inst::PushHalfWordImm));
     }
   }
-  else if (IS_MACRO("pdec")) {
+  else if (IS_MACRO("pushfp")) {
     double value = stod(assembly[1]);
     auto view = reinterpret_cast<uint64_t *>(&value);
-    uint64_t hi = *view >> 32;
-    uint64_t lo = *view & UINT32_MAX;
-    prog.push_back((hi << 7) + uint64_t(Inst::PushUIntSL));
-    prog.push_back((lo << 7) + uint64_t(Inst::PushDecLoAH));
+    uint64_t hi32 = *view >> 32;
+    uint64_t lo32 = *view & UINT32_MAX;
+    // load hi32
+    uint32_t hi = hi32 >> 16;
+    uint32_t lo = hi32 & UINT16_MAX;
+    prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
+    prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
+    prog.push_back(Code(Inst::AddU));
+    prog.push_back((32u << 7) + Code(Inst::ShiftLeftImm));
+    // load lo32
+    hi = lo32 >> 16;
+    lo = lo32 & UINT16_MAX;
+    prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
+    prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
+    prog.push_back(Code(Inst::AddU));
+    // final combination
+    prog.push_back(Code(Inst::AddU));
+    prog.push_back(Code(Inst::SpawnFP));
   }
   else {
     result = false;
@@ -192,7 +250,7 @@ int main(int argc, char **argv) {
   //open asm file
   auto fp = fopen(argv[1], "r");
   Program prog;
-  uint64_t inst, args;
+  uint32_t inst, args;
   int base;
   bool fine = true;
 
@@ -255,7 +313,7 @@ int main(int argc, char **argv) {
 
       if (!fine) break;
 
-      uint64_t output = args << 7;
+      Code output = args << 7;
       output += inst;
       prog.push_back(output);
     }
@@ -274,7 +332,7 @@ int main(int argc, char **argv) {
         
         if (fp != nullptr) {
           for (auto &code : prog) {
-            fwrite(&code, sizeof(uint64_t), 1, fp);
+            fwrite(&code, sizeof(Code), 1, fp);
             if (ferror(fp)) {
               puts("Error occurred while writing bytecodes");
               break;

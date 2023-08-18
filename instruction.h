@@ -1,5 +1,5 @@
 // Canvas Bytecode Inst Definitions.
-//TODO: Decimal command
+//TODO: FP command
 //TODO: branch command
 // U - Unsigned
 // SL - Shift left
@@ -29,11 +29,23 @@ DEF_INST(SubF, "subf")
 DEF_INST(MulF, "mulf")
 DEF_INST(DivF, "divf")
 
-DEF_INST(PushUInt, "pushuint")
-DEF_INST(PushUIntSL, "pushuintsl")
-DEF_INST(PushIntAH, "pushintah")
-DEF_INST(PushInt, "pushint")
-DEF_INST(PushDecLoAH, "pushdecloah")
+// Deprecated. Old impl with 64-bit insn length.
+// DEF_INST(PushUInt16, "puint")
+// DEF_INST(PushUInt16SL, "puintsl")
+// DEF_INST(PushIntAH, "pushintah")
+// DEF_INST(PushInt, "pushint")
+// DEF_INST(PushDecLoAH, "pushdecloah")
+
+DEF_INST(PushHalfWordImm, "pushhwi")
+DEF_INST(PushHalfWordImmSL16, "pushhwisl16")
+
+// Special Add for assemble 64-bit int
+DEF_INST(AddSL32, "addsl32")
+
+//Use 2 Words to assemble FP value
+DEF_INST(SpawnFP, "spawnfp")
+
+DEF_INST(SpawnSignedInt, "spawnsint")
 
 DEF_INST(Jump, "jmp")
 DEF_INST(Branch, "branch")

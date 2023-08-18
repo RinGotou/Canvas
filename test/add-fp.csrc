@@ -1,0 +1,5 @@
+pushfp 65540.123
+pushfp 2
+addf
+print
+doze

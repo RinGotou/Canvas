@@ -2,10 +2,14 @@
 #include <stack>
 #include <cstdint>
 #include <string>
+//#include <variant>
 
-//7bit inst, 57bit args
-using Code = uint64_t;
+//7bit inst, 25bit args
+using Code = uint32_t;
 // |--------args--------|--inst--|
+
+// 1 Word = 32bits
+// HalfWord, DoubleWord, Byte
 
 // Maybe we can use better container design?
 using Program = std::vector<Code>;
@@ -13,8 +17,6 @@ using Program = std::vector<Code>;
 //for runtime stack
 using std::stack;
 using std::vector;
-
-constexpr int64_t kMaxJumpAddrRange = 0x1FFFFFFFFFFFFFFF;
 
 // warning: shift left for a negative signed int is UB before c++20
 // consider safe impl for signed int.
@@ -40,13 +42,13 @@ const vector<const char*> kInstStrings = {
 enum class UnitType {
   Int, //int64_t 
   UInt, //uint64_t
-  Decimal //double
+  FP //double
 };
 
 union UnitValue {
  uint64_t uinteger;
  int64_t integer;
- double decimal;
+ double fp;
 };
 
 struct Unit {
@@ -54,10 +56,10 @@ struct Unit {
   UnitType type;
 };
 
-// INT VALue, Unsigned INT VALue, DECImal VALue
+// INT VALue, Unsigned INT VALue, Floating-Point VALue
 #define INTVAL(_unit)  (_unit).value.integer
 #define UINTVAL(_unit) (_unit).value.uinteger
-#define DECIVAL(_unit) (_unit).value.decimal
+#define FPVAL(_unit) (_unit).value.fp
 
 //memo: use independent pc stack?
 

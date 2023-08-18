@@ -1,5 +1,0 @@
-pushint 1
-pushint 2
-add
-print
-doze
