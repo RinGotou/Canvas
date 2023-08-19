@@ -1,3 +1,4 @@
+#include <unordered_map>
 #include <vector>
 #include <stack>
 #include <cstdint>
@@ -17,6 +18,7 @@ using Program = std::vector<Code>;
 //for runtime stack
 using std::stack;
 using std::vector;
+using std::pair;
 
 // warning: shift left for a negative signed int is UB before c++20
 // consider safe impl for signed int.
@@ -60,8 +62,6 @@ struct Unit {
 #define INTVAL(_unit)  (_unit).value.integer
 #define UINTVAL(_unit) (_unit).value.uinteger
 #define FPVAL(_unit) (_unit).value.fp
-
-//memo: use independent pc stack?
 
 class Machine {
   protected:

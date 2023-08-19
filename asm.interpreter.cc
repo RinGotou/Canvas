@@ -22,7 +22,10 @@ using std::stoll;
 using std::stoull;
 using std::stod;
 
-constexpr uint32_t kMaxJumpAddrRange = 0x1FFFFFF;
+using Label = pair<string, size_t>;
+using Labels = std::unordered_map<string, size_t>;
+
+constexpr uint32_t kMaxJumpArg = 0x3FFFFFF;
 
 bool ReadInst(vector<string> &dest, FILE *fp) {
   bool result = true;
@@ -95,7 +98,35 @@ inline bool IsUnsignedInst(Inst inst) {
 
 inline bool IsJumpInst(Inst inst) {
   return inst == Inst::Jump
-    || inst == Inst::Branch;
+    || inst == Inst::Branch
+    || inst == Inst::FarJump
+    || inst == Inst::FarBranch;
+}
+
+inline bool IsAlpha(char c) {
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+inline bool IsNumber(char c) {
+  return (c >= '0' && c <= '9');
+}
+
+inline bool IsLabelString(string_view src) {
+  if (src.size() < 2) {
+    return false;
+  }
+  
+  if (src[src.size() - 1] != ':') {
+    return false;
+  }
+
+  for (size_t i = 0; i < src.size() - 1; i += 1) {
+    if (!IsAlpha(src[i]) && !IsNumber(src[i])) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 int GetIntLiteralBase(string_view str) {
@@ -147,7 +178,6 @@ bool TryExpandMacro(vector<string> &assembly, Program &prog) {
       prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
       prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
       prog.push_back(Code(Inst::AddU));
-      prog.push_back(Code(Inst::SpawnSignedInt));
     }
     else if (*view > UINT32_MAX) {
       uint32_t hi32 = *view >> 32;
@@ -186,7 +216,6 @@ bool TryExpandMacro(vector<string> &assembly, Program &prog) {
       prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
       prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
       prog.push_back(Code(Inst::AddU));
-      prog.push_back(Code(Inst::SpawnSignedInt));
     }
     else if (value > UINT32_MAX) {
       uint32_t hi32 = value >> 32;
@@ -242,6 +271,76 @@ bool TryExpandMacro(vector<string> &assembly, Program &prog) {
   return result;
 }
 
+bool TryExpandJumpInsn(vector<string> &assembly, Program &prog, Labels &labels) {
+  if (assembly.size() < 2) {
+    return false;
+  }
+
+  bool result = true;
+
+  auto it = labels.find(assembly[1]);
+
+  if (it == labels.end()) {
+    result = false;
+  }
+  else {
+    size_t offset = it->second;
+
+#define IS_INSN(_str) (strcmp(assembly[0].data(), _str) == 0)
+    // if offset's binary length large than 25bit, use FarJump/FarBranch instead.
+    if (offset > kMaxJumpArg) {
+      if (offset <= UINT32_MAX) {
+        uint32_t hi = offset >> 16;
+        uint32_t lo = offset & UINT16_MAX;
+        prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
+        prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
+        prog.push_back(Code(Inst::AddU));
+      }
+      else if (offset > UINT32_MAX) {
+        uint32_t hi32 = offset >> 32;
+        uint32_t lo32 = offset & UINT32_MAX;
+        // load hi32
+        uint32_t hi = hi32 >> 16;
+        uint32_t lo = hi32 & UINT16_MAX;
+        prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
+        prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
+        prog.push_back(Code(Inst::AddU));
+        prog.push_back((32u << 7) + Code(Inst::ShiftLeftImm));
+        // load lo32
+        hi = lo32 >> 16;
+        lo = lo32 & UINT16_MAX;
+        prog.push_back((hi << 7) + Code(Inst::PushHalfWordImmSL16));
+        prog.push_back((lo << 7) + Code(Inst::PushHalfWordImm));
+        prog.push_back(Code(Inst::AddU));
+        // final combination
+        prog.push_back(Code(Inst::AddU));
+      }
+
+      if (IS_INSN("jmp") || IS_INSN("farjmp")) {
+        prog.push_back(Code(Inst::FarJump));
+      }
+      else if (IS_INSN("branch") || IS_INSN("farbranch")) {
+        prog.push_back(Code(Inst::FarBranch));
+      }
+    }
+    else {
+      Code insn = offset << 7;
+
+      if (IS_INSN("jmp") || IS_INSN("farjmp")) {
+        insn += Code(Inst::Jump);
+      }
+      else if (IS_INSN("branch") || IS_INSN("farbranch")) {
+        insn += Code(Inst::Branch);
+      }
+
+      prog.push_back(insn);
+    }
+#undef IS_INSN
+  }
+
+  return result;
+}
+
 int main(int argc, char **argv) {
   if (argc < 2) {
     puts("Invalid arguments");
@@ -250,8 +349,11 @@ int main(int argc, char **argv) {
   //open asm file
   auto fp = fopen(argv[1], "r");
   Program prog;
+  Labels labels;
   uint32_t inst, args;
   int base;
+  // Record offset without label line
+  size_t asm_offset = 0;
   bool fine = true;
 
   if (fp != nullptr) {
@@ -262,15 +364,31 @@ int main(int argc, char **argv) {
         continue;
       }
 
+      if (IsLabelString(assembly[0])) {
+        auto substr = assembly[0].substr(0, assembly[0].size() - 1);
+        //printf("Found label %s\n", substr.data()); 
+        labels.insert(Label(substr.data(), asm_offset));
+        continue;
+      }
+
+      asm_offset += 1;
+
       if (TryExpandMacro(assembly, prog)) {
         continue;
       }
 
       if (!GetInst(inst, assembly[0])) {
-        printf("Invalid instruction: %s %s\n", 
-            assembly[0].data(), assembly[1].data());
+        printf("Invalid instruction: %s %lu\n", assembly[0].data(), assembly.size());
         fine = false;
+
         break;
+      }
+
+      if (IsJumpInst(static_cast<Inst>(inst))) {
+        if (!TryExpandJumpInsn(assembly, prog, labels)) {
+          puts("Warning: failed to expand jump insn"); 
+        }
+        continue;
       }
 
       //generate actual inst 
@@ -283,20 +401,9 @@ int main(int argc, char **argv) {
           else {
             base = GetIntLiteralBase(assembly[1]);
             if (base == 2) {
-              assembly[1] = 
-                assembly[1].substr(2, assembly[1].size() - 2);
+              assembly[1] = assembly[1].substr(2, assembly[1].size() - 2);
             }
             args = stoull(assembly[1], nullptr, base);
-
-            if (IsJumpInst(static_cast<Inst>(inst)) &&
-                  args > kMaxJumpAddrRange) {
-              fine = false;
-              puts("Jump distance out of range");
-            }
-            else if (args > UINT32_MAX) {
-              fine = false;
-              puts("value out of range");
-            }
           }
         }
         else {

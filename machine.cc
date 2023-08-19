@@ -3,9 +3,8 @@
 #include <bit>
 
 // useful macros
-//TODO: add more arg option to op to make full use of 64-bit inst
 #define GET_INST(_code) static_cast<uint8_t>(_code % uint64_t(0x80))
-#define GET_ARGS(_code) static_cast<uint64_t>(_code >> 7)
+#define GET_ARGS(_code) static_cast<uint32_t>(_code >> 7)
 #define HAS_ARGS(_code) ((_code >> 7) != 0x0)
 
 #define POP_VALUE_TO(_tmp) \
@@ -141,6 +140,20 @@ bool Machine::Run(Program &prog) {
           pc_ = GET_ARGS(current);
           continue;
         }
+      }
+      break;
+    case Inst::FarJump:
+      POP_VALUE_TO(tmp0);
+      pc_ = UINTVAL(tmp0);
+      continue;
+    case Inst::FarBranch:
+      // addr
+      POP_VALUE_TO(tmp1);
+      // condition
+      POP_VALUE_TO(tmp0);
+      if (UINTVAL(tmp0) != 0ull) {
+        pc_ = UINTVAL(tmp1);
+        continue;
       }
       break;
     case Inst::Pop:

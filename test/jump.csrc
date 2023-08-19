@@ -1,0 +1,4 @@
+pushimm 100
+loop:
+print
+jmp loop
