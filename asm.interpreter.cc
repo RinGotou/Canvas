@@ -129,6 +129,24 @@ inline bool IsLabelString(string_view src) {
   return true;
 }
 
+inline bool IsSegmentUnit(string_view src) {
+  if (src.size() < 2) {
+    return false;
+  }
+
+  if (src[0] != '.') {
+    return false;
+  }
+
+  for (size_t i = 1; i < src.size(); i += 1) {
+    if (!IsAlpha(src[i]) && !IsNumber(src[i])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 int GetIntLiteralBase(string_view str) {
   if (str.size() == 1) {
     return 10;
@@ -341,6 +359,13 @@ bool TryExpandJumpInsn(vector<string> &assembly, Program &prog, Labels &labels) 
   return result;
 }
 
+bool ExpandSegementContents(vector<string> &assembly, Program &prog, Labels &labels) {
+  bool result = true;
+
+
+  return result;
+}
+
 int main(int argc, char **argv) {
   if (argc < 2) {
     puts("Invalid arguments");
@@ -409,8 +434,7 @@ int main(int argc, char **argv) {
         else {
           base = GetIntLiteralBase(assembly[1]);
           if (base == 2) {
-            assembly[1] = 
-              assembly[1].substr(2, assembly[1].size() - 2);
+            assembly[1] = assembly[1].substr(2, assembly[1].size() - 2);
           }
 
           int32_t signed_val = stoll(assembly[1], nullptr, base);

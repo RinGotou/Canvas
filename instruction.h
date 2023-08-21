@@ -1,6 +1,4 @@
 // Canvas Bytecode Inst Definitions.
-// TODO: FP command
-// TODO: branch command
 // U - Unsigned
 // SL - Shift left
 // AH - Assemble Highpart
