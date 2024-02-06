@@ -70,6 +70,10 @@ DEF_INST(RotateRight, "rr")
 DEF_INST(RotateLeftImm, "rli")
 DEF_INST(RotateRightImm, "rri")
 
+DEF_INST(SwapTop, "swaptop")
+DEF_INST(Dup, "dup")
+DEF_INST(DupN, "dupn")
+
 DEF_INST(Doze, "doze")
 
 #undef DEF_INST

@@ -289,6 +289,24 @@ bool Machine::Run(Program &prog) {
       UINTVAL(stack_.top()) = std::rotr(UINTVAL(tmp0), UINTVAL(tmp1));
       break;
 
+    case Inst::SwapTop:
+      POP_VALUE_TO(tmp1);
+      POP_VALUE_TO(tmp0);
+      stack_.push(tmp1);
+      stack_.push(tmp0);
+      break;
+
+    case Inst::Dup:
+      stack_.push(stack_.top());
+      break;
+
+    case Inst::DupN:
+      UINTVAL(tmp0) = GET_ARGS(current);
+      for (size_t i = 0; i < UINTVAL(tmp0); i += 1) {
+        stack_.push(stack_.top());
+      }
+      break;
+
     case Inst::Doze:
     default:
       break;

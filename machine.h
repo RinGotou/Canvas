@@ -3,7 +3,8 @@
 #include <stack>
 #include <cstdint>
 #include <string>
-//#include <variant>
+#include <cstdlib>
+#include "memory-utils.h"
 
 //7bit inst, 25bit args
 using Code = uint32_t;
@@ -20,11 +21,38 @@ using std::stack;
 using std::vector;
 using std::pair;
 
+// Base class for Memory Interface that will need to be
+// inherited by any exact implementation.
+class MemoryInterface {
+protected:
+public:
+  MemoryInterface() { /* Placebo */ }
+  virtual void *Alloc(size_t num, size_t size) = 0;
+  virtual void Delete(void *) = 0;
+  virtual void Collect() = 0;
+};
+
+// Barebone wrapper of calloc/free.
+class SimpleMemoryInterface : virtual public MemoryInterface {
+protected:
+public:
+  SimpleMemoryInterface() {}
+  void *Alloc(size_t num, size_t size) override {
+    return calloc(num, size);
+  }
+
+  void Delete(void *ptr) override {
+    free(ptr);
+  }
+
+  void Collect() {}
+};
+
 // warning: shift left for a negative signed int is UB before c++20
 // consider safe impl for signed int.
-struct Symbol {
-  uint64_t id, value;
-};
+//struct Symbol {
+//  uint64_t id, value;
+//};
 //TODO: strtab?
 //TODO: Magic string?
 
@@ -47,10 +75,12 @@ enum class UnitType {
   FP //double
 };
 
+//TODO: For string features, we must add symbol table.
 union UnitValue {
  uint64_t uinteger;
  int64_t integer;
  double fp;
+ void *ptr;
 };
 
 struct Unit {
